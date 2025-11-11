@@ -44,23 +44,35 @@ tab_rag, = st.tabs(["RAG QA"])
 with tab_rag:
     st.subheader("RAG Question Answering")
     question = st.text_input("Ask a question about your KB", placeholder="What is Forecast360?")
+    asked = st.button("Ask", type="primary")
 
-    if st.button("Ask", type="primary") and question.strip():
-        # Show user question with avatar
-        with st.chat_message("user", avatar=USER_AVATAR):
-            st.markdown(question)
+    if asked and question.strip():
+        # Guard required config
+        missing = []
+        if not settings.WEAVIATE_URL:
+            missing.append("WEAVIATE_URL")
 
-        agent = RAGAgent(settings=settings, provider=model_provider, temperature=temperature, top_k=k)
-        with st.spinner("Thinking..."):
-            answer, sources = agent.run(question)
+        if missing:
+            st.error(f"Missing required setting(s): {', '.join(missing)}")
+        else:
+            # Show user question with avatar
+            with st.chat_message("user", avatar=USER_AVATAR):
+                st.markdown(question)
 
-        # Show assistant answer with avatar
-        with st.chat_message("assistant", avatar=LLM_AVATAR):
-            st.markdown("### Answer")
-            st.write(answer)
-            if sources:
-                st.markdown("### Sources")
-                for i, s in enumerate(sources, 1):
-                    uri = s.get("uri", "")
-                    score = s.get("score", "")
-                    st.markdown(f"{i}. {uri} — score={score}")
+            agent = RAGAgent(settings=settings, provider=model_provider, temperature=temperature, top_k=k)
+            with st.spinner("Thinking..."):
+                answer, sources = agent.run(question)
+
+            with st.chat_message("assistant", avatar=LLM_AVATAR):
+                st.markdown("### Answer")
+                st.write(answer)
+                if sources:
+                    st.markdown("### Sources")
+                    for i, s in enumerate(sources, 1):
+                        uri = s.get("uri", "")
+                        score = s.get("score", "")
+                        st.markdown(f"{i}. {uri} — score={score}")
+    elif asked:
+        st.warning("Please type a question.")
+
+
